@@ -1,6 +1,7 @@
 from dataclasses import dataclass, asdict
 from typing import Optional
 import json
+from logger_setup import logger
 from pathlib import Path
 
 @dataclass
@@ -11,13 +12,15 @@ class SongInfo:
     song_sound: Optional[list[Path]]
 
     def to_dict(self)->dict:
+        logger.debug(f'Converting SongInfo of {self.song_name} to dict')
         _dict = asdict(self)
         if _dict['song_sound'] is not None:
             _dict["song_sound"] = [str(p) for p in _dict['song_sound']]
         return _dict
 
     @classmethod
-    def from_dict(cls, _dict: dict)->SongInfo:
+    def from_dict(cls, _dict: dict):
+        logger.debug(f'Converting SongInfo from dict: {_dict.get('song_name')}')
         sound = _dict.get('song_sound')
         if sound is not None:
             sound = [Path(s) for s in sound]
@@ -29,10 +32,12 @@ class SongInfo:
         )
 
     def to_json(self)->str:
+        logger.debug(f'Converting {self.song_name} to json')
         return json.dumps(self.to_dict(), ensure_ascii=False)
 
     @classmethod
-    def from_json(cls, json_str: str)->SongInfo:
+    def from_json(cls, json_str: str):
+        logger.debug(f'Converting SongInfo from json')
         return cls.from_dict(json.loads(json_str))
 
 @dataclass
