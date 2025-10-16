@@ -20,10 +20,38 @@ def get_whisper(model_name='medium', device='cpu'):
 try:
     info_queue = redis.Redis(host='localhost', port=6379, db=0)
     info_queue.ping()
-    logger.info(f'connected to redis')
+    logger.info(f'connected to redis for info queue')
 except redis.ConnectionError:
-    logger.info(f'failed to connect to redis')
+    logger.info(f'failed to connect to redis for info queue')
+
+try:
+    types_queue = redis.Redis(host='localhost', port=6379, db=1)
+    types_queue.ping()
+    logger.info(f'connected to redis for types queue')
+except redis.ConnectionError:
+    logger.info(f'failed to connect to redis for types queue')
+
 
 
 AUDIO_EXTENSIONS = (".mp3", ".wav", ".flac", ".m4a", ".aac", ".ogg")
 STEM_NAMES = ['vocals', 'bass', 'drums', 'other']
+
+MIN_POP_REGULAR_LENGTH = 165.0
+MAX_POP_REGULAR_LENGTH = 225.0
+
+POP_MOST_COMMON = [
+    "baby", "love", "heart", "kiss", "forever", "together", "tonight", "dance", "party",
+    "feel", "touch", "hold", "shine", "light", "fun", "beautiful", "happy", "magic",
+    "smile", "sweet", "dream", "believe"
+]
+
+POP_COMMON = [
+    "darling", "honey", "crazy", "fly", "sky", "angel", "amazing", "wonderful", "perfect",
+    "free", "alive", "sing", "move", "groove", "everybody", "strong", "hope", "sweetheart"
+]
+
+POP_LESS_COMMON = [
+    "rainbow", "fantasy", "paradise", "wonder", "glow", "vibe", "bright", "pretty"
+]
+
+

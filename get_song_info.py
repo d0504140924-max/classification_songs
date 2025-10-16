@@ -79,7 +79,7 @@ class GetSongInfo(GetInfoInterface):
         text = result.get('text', '')
         words = re.findall(r"[A-Za-z']+", text)
         logger.debug(f'Extracted words: {words}')
-        return list(set(w.lower() for w in words))
+        return [w.lower() for w in words]
 
     @staticmethod
     def receive_song_length(path: Path) -> float:

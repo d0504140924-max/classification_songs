@@ -43,8 +43,8 @@ class SongInfo:
 @dataclass
 class Types:
     song_name: str
-    love_song: bool
-    pop_genre: bool
-    rap_genre: bool
-    classical_genre: bool
+    love_song: Optional[bool] = None
+    pop_genre: Optional[bool] = None
+    rap_genre: Optional[bool] = None
+    classical_genre: Optional[bool] = None
 
