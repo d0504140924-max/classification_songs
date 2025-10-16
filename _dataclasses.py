@@ -48,3 +48,27 @@ class Types:
     rap_genre: Optional[bool] = None
     classical_genre: Optional[bool] = None
 
+    def to_dict(self)->dict:
+        logger2.debug(f'Converting Types of {self.song_name} to dict')
+        _dict = asdict(self)
+        return _dict
+
+    @classmethod
+    def from_dict(cls, _dict: dict):
+        logger2.debug(f'Converting Types from dict: {_dict.get('song_name')}')
+        return cls(
+            song_name=_dict.get('song_name'),
+            love_song=_dict.get('love_song'),
+            pop_genre=_dict.get('pop_genre'),
+            rap_genre=_dict.get('rap_genre'),
+            classical_genre=_dict.get('classical_genre')
+        )
+
+    def to_json(self)->str:
+        logger2.debug(f'Converting {self.song_name} to json')
+        return json.dumps(self.to_dict(), ensure_ascii=False)
+
+    @classmethod
+    def from_json(cls, json_str: str):
+        logger2.debug(f'Converting Types from json')
+        return cls.from_dict(json.loads(json_str))

@@ -90,10 +90,10 @@ class ClassificationForGenrePop(ClassificationInterface):
         final_score = 0.50*self.calculate_sound_score() + 0.35*self.calculate_score_words() + 0.15*self.calculate_score_length()
         return final_score
 
-    def comparison_type(self):
+    def comparison_type(self)->bool:
         pop = self.calculate_final_score() > 50
         types = Types(song_name=SongInfo.song_name, pop_genre=pop)
-        types_queue.lpush(types)
+        types_queue.lpush(self.types_queue_name, types.to_json())
         return pop
 
 

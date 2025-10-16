@@ -4,7 +4,7 @@ import numpy as np
 from _dataclasses import SongInfo
 from nltk.stem import WordNetLemmatizer
 
-
+sr = 22050
 class GetSongDetailsForComparison:
     def __init__(self, song_info: SongInfo):
         self.song_info = song_info
@@ -14,14 +14,14 @@ class GetSongDetailsForComparison:
 
     def get_drums(self) -> dict:
         drums_path = str(filter(lambda p: str(p).endswith('drums.wav'), self.sound_files))
-        y, sr = librosa.load(drums_path, sr=22050, mono=True)
+        y, _sr = librosa.load(drums_path, sr=sr, mono=True)
         y = y - y.mean()
         y = y / (np.max(np.abs(y)) or 1.0)
-        on = librosa.onset.onset_strength(y=y, sr=sr)
-        tempo, beats = librosa.beat.beat_track(onset_envelope=on, sr=sr)
+        on = librosa.onset.onset_strength(y=y, sr=_sr)
+        tempo, beats = librosa.beat.beat_track(onset_envelope=on, sr=_sr)
         ibi_std = np.std(np.diff(librosa.frames_to_time(beats, sr=sr))) if len(beats) > 2 else np.nan
-        on_times = librosa.onset.onset_detect(onset_envelope=on, sr=sr, units='time')
-        onset_density = len(on_times) / (len(y) / sr)
+        on_times = librosa.onset.onset_detect(onset_envelope=on, sr=_sr, units='time')
+        onset_density = len(on_times) / (len(y) / _sr)
         return {'tempo': tempo, 'ibi_std': ibi_std, 'onset_density': onset_density}
 
     @staticmethod
