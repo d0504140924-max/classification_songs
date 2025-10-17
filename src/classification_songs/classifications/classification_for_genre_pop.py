@@ -1,4 +1,4 @@
-from classification_interface import ClassificationInterface
+from classification_songs.classification_interface import ClassificationInterface
 from logger_setup import logger2
 from _dataclasses import SongInfo, Types
 import numpy as np
