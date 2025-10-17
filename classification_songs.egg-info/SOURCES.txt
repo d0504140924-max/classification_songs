@@ -1,6 +1,0 @@
-pyproject.toml
-classification_songs.egg-info/PKG-INFO
-classification_songs.egg-info/SOURCES.txt
-classification_songs.egg-info/dependency_links.txt
-classification_songs.egg-info/requires.txt
-classification_songs.egg-info/top_level.txt
