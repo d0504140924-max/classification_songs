@@ -113,4 +113,3 @@ class TestGetLength(unittest.TestCase):
         self.assertEqual(length, 33.4)
 
 
-class TestGetSound(unittest.TestCase):

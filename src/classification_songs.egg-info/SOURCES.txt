@@ -1,0 +1,7 @@
+pyproject.toml
+src/classification_songs.egg-info/PKG-INFO
+src/classification_songs.egg-info/SOURCES.txt
+src/classification_songs.egg-info/dependency_links.txt
+src/classification_songs.egg-info/entry_points.txt
+src/classification_songs.egg-info/requires.txt
+src/classification_songs.egg-info/top_level.txt

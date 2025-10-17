@@ -1,9 +1,8 @@
-from classification_songs.classification_interface import ClassificationInterface
-from logger_setup import logger2
-from _dataclasses import SongInfo, Types
+from classification_songs.classifications.classification_interface import ClassificationInterface
+from classification_songs.configorations._dataclasses import SongInfo, Types
+from classification_songs.configorations.get_song_details_for_comparison import GetSongDetailsForComparison
+from classification_songs.configoration import (info_queue, types_queue, POP_COMMON, POP_LESS_COMMON, POP_MOST_COMMON)
 import numpy as np
-from get_song_details_for_comparison import GetSongDetailsForComparison
-from configoration import (info_queue, types_queue, POP_COMMON, POP_LESS_COMMON, POP_MOST_COMMON)
 
 class ClassificationForGenrePop(ClassificationInterface):
 

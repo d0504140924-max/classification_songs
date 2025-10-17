@@ -1,13 +1,13 @@
-from get_info_interface import GetInfoInterface
+from classification_songs.information.get_info_interface import GetInfoInterface
+from classification_songs.configorations._dataclasses import SongInfo
+from classification_songs.configoration import get_whisper, AUDIO_EXTENSIONS, STEM_NAMES, info_queue
+from classification_songs.configorations.logger_setup import logger
 from typing import Optional
 import subprocess
 from pathlib import Path
 import hashlib
 from mutagen import File
-from _dataclasses import SongInfo
 import re
-from configoration import get_whisper, AUDIO_EXTENSIONS, STEM_NAMES, info_queue
-from logger_setup import logger
 
 class GetSongInfo(GetInfoInterface):
 

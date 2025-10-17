@@ -1,7 +1,7 @@
 from dataclasses import dataclass, asdict
 from typing import Optional
 import json
-from logger_setup import logger
+from classification_songs.configorations.logger_setup import logger, logger2
 from pathlib import Path
 
 @dataclass
