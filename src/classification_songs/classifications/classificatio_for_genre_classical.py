@@ -1,10 +1,10 @@
 from classification_interface import ClassificationInterface
 from classification_songs.configorations._dataclasses import SongInfo, Types
 from classification_songs.configorations.get_song_details_for_comparison import GetSongDetailsForComparison
-from classification_songs.configorations.configoration import (info_queue, POP_COMMON, POP_LESS_COMMON, POP_MOST_COMMON)
+from classification_songs.configorations.configoration import (info_queue, CLASSICAL_COMMON, CLASSICAL_LESS_COMMON, CLASSICAL_MOST_COMMON)
 import numpy as np
 
-class ClassificationForGenrePop(ClassificationInterface):
+class ClassificationForGenreClassical(ClassificationInterface):
 
     def __init__(self, queue_name):
         self.queue_name = queue_name
@@ -32,15 +32,15 @@ class ClassificationForGenrePop(ClassificationInterface):
     def calculate_score_words(self, song_info: SongInfo)->float:
         song_words = self.get_words(song_info)
         words_score = 0.0
-        for word in POP_MOST_COMMON:
+        for word in CLASSICAL_MOST_COMMON:
             num_show = song_words.count(word)
             if num_show > 0:
                 words_score += (len(song_words)/num_show)
-        for word in POP_COMMON:
+        for word in CLASSICAL_COMMON:
             num_show = song_words.count(word) * 0.7
             if num_show > 0:
                 words_score += (len(song_words)/num_show)
-        for word in POP_LESS_COMMON:
+        for word in CLASSICAL_LESS_COMMON:
             num_show = song_words.count(word) * 0.4
             if num_show > 0:
                 words_score += (len(song_words)/num_show)
@@ -50,60 +50,64 @@ class ClassificationForGenrePop(ClassificationInterface):
     def calculate_score_length(self, song_info: SongInfo)->float:
         length = self.get_length(song_info)
         score_length = 0.0
-        if 165 <= length < 225:
+        if 240 <= length < 600:
             score_length += 100.0
-        elif 120 < length < 165:
-            score_length += 45.0
-        elif 225 <= length < 300:
-            score_length += 75.0
+        elif 120 < length < 240:
+            score_length += 60.0
+        elif 600 <= length < 1200:
+            score_length += 80.0
         return score_length
 
     def drums_scor(self, song_info: SongInfo)->float:
         sound = self.get_sound_details(song_info)
         drums = sound['drums']
-        drum_score = (
-            ((1 - min(abs(drums['tempo']-110), 40)/40) * 0.5)*100 +
-            ((1 - min(drums['ibi_std'] if np.isfinite(drums['ibi_std']) else 0.5)/0.5) * 0.3)*100 +
-            (min(drums['onset_density']/2.0, 1.0) * 0.2)*100
-        )
+        tempo = drums['tempo']
+        ibi_std = drums['ibi_std'] if np.isfinite(drums['ibi_std']) else 0.5
+        onset_density = drums['onset_density']
+        density_component = (1 - min(onset_density / 1.5, 1.0)) * 0.5  # משקל מרכזי
+        ibi_component = min(ibi_std, 0.8) / 0.8 * 0.3
+        tempo_dev = min(abs(tempo - 60), abs(tempo - 120))
+        tempo_component = (1 - min(tempo_dev, 60) / 60) * 0.2
+        drum_score = (density_component + ibi_component + tempo_component) * 100.0
         return max(0.0, min(100, drum_score))
 
     def bass_scor(self, song_info: SongInfo)->float:
         sound = self.get_sound_details(song_info)
         bass = sound['bass']
-        bass_score = (
-            ((1 - abs(bass['low_ratio']-0.20)/0.20) * 0.6)*100 +
-            max(0.0, min(1.0, (bass['corr']+0.5)/1.0)) *40.0
-        )
+        low_ratio = bass['low_ratio']
+        low_component = (1 - abs(low_ratio - 0.12) / 0.10) * 0.7  # יעד ~0.12, חלון ±0.10
+        corr = bass['corr']
+        corr_component = max(0.0, min(1.0, (corr + 0.4) / 1.2)) * 0.3
+        bass_score = (low_component + corr_component) * 100.0
         return max(0.0, min(100, bass_score))
 
     def others_scor(self, song_info: SongInfo)->float:
         sound = self.get_sound_details(song_info)
         other = sound['other']
-        bright_score = 1 - ((min(abs(other['centroid']-2200)/1200, 1.0))*1.0)
-        dr_scor = 1 - (min(abs(other['dr_db']-12)/6, 1.0)*1.0)
-        other_score = 70.0*bright_score + 30.0*dr_scor
+        bright_score = 1 - (min(abs(other['centroid'] - 2600) / 1200, 1.0) * 1.0)
+        dr_scor = 1 - (min(abs(other['dr_db'] - 14) / 6, 1.0) * 1.0)
+        other_score = 70.0 * bright_score + 30.0 * dr_scor
         return other_score
 
     def calculate_sound_score(self, song_info: SongInfo)->float:
-        sound_score = 0.4*self.drums_scor(song_info) + 0.3*self.bass_scor(song_info) + 0.3*self.others_scor(song_info)
+        sound_score = 0.4 * self.drums_scor(song_info) + 0.3 * self.bass_scor(song_info) + 0.3 * self.others_scor(song_info)
         return sound_score
 
     def calculate_final_score(self, song_info: SongInfo)->float:
-        final_score = 0.50*self.calculate_sound_score(song_info) + 0.35*self.calculate_score_words(song_info) + 0.15*self.calculate_score_length(song_info)
+        final_score = 0.65 * self.calculate_sound_score(song_info) + 0.05 * self.calculate_score_words(song_info) + 0.30 * self.calculate_score_length(song_info)
         return final_score
 
     def comparison_type(self)->tuple[bool, float]:
         try:
             dc_with_types = self.get_song_from_queue()
             song_info = dc_with_types.song_info
-            pop = (self.calculate_final_score(song_info) > 50, self.calculate_final_score(song_info))
-            if not dc_with_types.pop_genre is None:
-                dc_with_types.pop_genre = pop
+            classical = (self.calculate_final_score(song_info) > 30, self.calculate_final_score(song_info))
+            if not dc_with_types.classical_genre is None:
+                dc_with_types.classical_genre = classical
                 types_queue.lpush(self.queue_name, dc_with_types.to_json())
             else:
                 types_queue.lpush(self.queue_name, dc_with_types)
-            return pop
+            return classical
         except:
             raise ValueError('empty queue of info')
 

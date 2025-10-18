@@ -1,7 +1,7 @@
 from dataclasses import dataclass, asdict
 from typing import Optional
 import json
-from classification_songs.configorations.logger_setup import logger, logger2
+from logger_setup import logger, logger2
 from pathlib import Path
 
 @dataclass
@@ -9,7 +9,7 @@ class SongInfo:
     song_name: str
     song_words: Optional[list[str]]
     song_length: Optional[float]
-    song_sound: Optional[list[Path]]
+    song_sound: Optional[dict[str, Path]]
 
     def to_dict(self)->dict:
         logger.debug(f'Converting SongInfo of {self.song_name} to dict')
@@ -20,7 +20,7 @@ class SongInfo:
 
     @classmethod
     def from_dict(cls, _dict: dict):
-        logger.debug(f'Converting SongInfo from dict: {_dict.get('song_name')}')
+        logger.debug(f"Converting SongInfo from dict: {_dict.get('song_name')}")
         sound = _dict.get('song_sound')
         if sound is not None:
             sound = [Path(s) for s in sound]
@@ -42,22 +42,24 @@ class SongInfo:
 
 @dataclass
 class Types:
-    song_name: str
-    love_song: Optional[bool] = None
-    pop_genre: Optional[bool] = None
-    rap_genre: Optional[bool] = None
-    classical_genre: Optional[bool] = None
+    song_info: Optional[dataclass(SongInfo)] = None
+    love_song: Optional[tuple[bool, float]] = None
+    pop_genre: Optional[tuple[bool, float]] = None
+    rap_genre: Optional[tuple[bool, float]] = None
+    classical_genre: Optional[tuple[bool, float]] = None
 
     def to_dict(self)->dict:
         logger2.debug(f'Converting Types of {self.song_name} to dict')
         _dict = asdict(self)
+        if _dict['song_info'] is not None:
+            _dict['song_info'] = SongInfo.to_dict(_dict['song_info'])
         return _dict
 
     @classmethod
     def from_dict(cls, _dict: dict):
-        logger2.debug(f'Converting Types from dict: {_dict.get('song_name')}')
+        logger2.debug(f"Converting Types from dict: {_dict.get('song_name')}")
         return cls(
-            song_name=_dict.get('song_name'),
+            song_info=SongInfo.from_dict(_dict.get('song_name')),
             love_song=_dict.get('love_song'),
             pop_genre=_dict.get('pop_genre'),
             rap_genre=_dict.get('rap_genre'),

@@ -25,10 +25,10 @@ logger.addHandler(file_handler)
 logger.addHandler(running_handler)
 
 file_handler2 = logging.FileHandler(LOG_FILE2)
-file_handler.setFormatter(formatter)
+file_handler2.setFormatter(formatter)
 
 running_handler2 = logging.StreamHandler()
-running_handler.setFormatter(formatter)
+running_handler2.setFormatter(formatter)
 
 logger2 = logging.getLogger('classification_logger')
 logger2.setLevel(logging.DEBUG)

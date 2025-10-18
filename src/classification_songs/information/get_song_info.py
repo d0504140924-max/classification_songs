@@ -1,5 +1,5 @@
 from classification_songs.information.get_info_interface import GetInfoInterface
-from classification_songs.configorations._dataclasses import SongInfo
+from classification_songs.configorations._dataclasses import SongInfo, Types
 from classification_songs.configoration import get_whisper, AUDIO_EXTENSIONS, STEM_NAMES, info_queue
 from classification_songs.configorations.logger_setup import logger
 from typing import Optional
@@ -46,10 +46,11 @@ class GetSongInfo(GetInfoInterface):
         h = hashlib.sha1(str(path.resolve()).encode()).hexdigest()[:12]
         out_dir = out_root / model_name / h
         out_dir.mkdir(parents=True, exist_ok=True)
-        cmd = ["demucs", "-n", model_name, "-d", 'cpu', "-o", str(out_root), str(path)]
+        cmd = ["demucs", "-n", model_name, "-d", 'cpu', "-o", str(out_dir), str(path)]
         subprocess.run(cmd, capture_output=True, text=True, check=False)
+        produced_dir = out_dir / model_name / path.stem
         logger.debug(f'Demucs output directory {out_dir}')
-        return out_dir
+        return produced_dir
 
     def dict_of_stems(self, path: Path) -> dict[str, Path]:
         logger.debug(f'Creating dictionary of stems for {path}')
@@ -70,7 +71,7 @@ class GetSongInfo(GetInfoInterface):
 
     @staticmethod
     def receive_song_words(separated_stems: dict[str, Path]) -> list[str]:
-        logger.debug(f'Receiving song words for {separated_stems['vocals']}')
+        logger.debug(f"Receiving song words for {separated_stems['vocals']}")
         vocal_path = separated_stems['vocals']
         logger.info(f'Transcribing vocal from {vocal_path}')
         model = get_whisper()
@@ -92,12 +93,12 @@ class GetSongInfo(GetInfoInterface):
         return length_seconds
 
     @staticmethod
-    def receive_song_sound(separated_stems: dict[str, Path]) -> list[Optional[Path]]:
+    def receive_song_sound(separated_stems: dict[str, Path]) -> dict:
         logger.debug(f'Collecting sound stems')
         bass_path = separated_stems['bass']
         drums_path = separated_stems['drums']
         other_path = separated_stems['other']
-        return [bass_path, drums_path, other_path]
+        return {'bass_path': bass_path, 'drums_path': drums_path, 'other_path': other_path}
 
     def get_info(self, path: str) ->SongInfo:
         logger.debug(f'Getting info for {path}')
@@ -108,8 +109,9 @@ class GetSongInfo(GetInfoInterface):
         words = self.receive_song_words(separated_stems)
         length = self.receive_song_length(_pathlib)
         sound = self.receive_song_sound(separated_stems)
-        song_info = SongInfo(song_name=path, song_words=words, song_length=length, song_sound=sound)
-        info_queue.lpush(self.queue_name, song_info.to_json())
-        logger.info(f'Pushed song {song_info} to queue {self.queue_name}')
+        song_info = SongInfo(song_name=_pathlib.stem, song_words=words, song_length=length, song_sound=sound)
+        types = Types(song_info=song_info)
+        info_queue.lpush(self.queue_name, types.to_json())
+        logger.info(f'Pushed song {song_info.song_name} to queue {self.queue_name}')
         return song_info
 

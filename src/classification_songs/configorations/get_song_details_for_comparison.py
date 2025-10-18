@@ -1,7 +1,7 @@
 import librosa
 import librosa.display
 import numpy as np
-from _dataclasses import SongInfo
+from classification_songs.configorations._dataclasses import SongInfo
 from nltk.stem import WordNetLemmatizer
 
 sr = 22050
@@ -13,7 +13,7 @@ class GetSongDetailsForComparison:
         self.words = self.song_info.song_words
 
     def get_drums(self) -> dict:
-        drums_path = str(filter(lambda p: str(p).endswith('drums.wav'), self.sound_files))
+        drums_path = self.sound_files['drums_path']
         y, _sr = librosa.load(drums_path, sr=sr, mono=True)
         y = y - y.mean()
         y = y / (np.max(np.abs(y)) or 1.0)
@@ -33,13 +33,13 @@ class GetSongDetailsForComparison:
         return low
 
     def get_bass(self) -> dict:
-        bass_path = str(filter(lambda p: str(p).endswith('bass.wav'), self.sound_files))
+        bass_path = self.sound_files['bass_path']
         b, _ = librosa.load(bass_path, sr=sr, mono=True)
         s = np.abs(librosa.stft(b, n_fft=2048, hop_length=512)) ** 2
         freqs = librosa.fft_frequencies(sr=sr, n_fft=2048)
         total = s.sum() + 1e-12
         low_ratio = s[(freqs >= 20) & (freqs < 200), :].sum() / total
-        drums_path = str(filter(lambda p: str(p).endswith('drums.wav'), self.sound_files))
+        drums_path = self.sound_files['drums_path']
         d, _ = librosa.load(drums_path, sr=sr, mono=True)
         la, lb = self.low_envelope(b), self.low_envelope(d)
         n = min(len(la), len(lb))
@@ -48,7 +48,7 @@ class GetSongDetailsForComparison:
 
 
     def get_other(self) -> dict:
-        other_path = str(filter(lambda p: str(p).endswith('other.wav'), self.sound_files))
+        other_path = self.sound_files['other_path']
         o, _ = librosa.load(other_path, sr=sr, mono=True)
         centroid = librosa.feature.spectral_centroid(y=o, sr=sr).mean()
         rms = librosa.feature.rms(y=o).flatten()
