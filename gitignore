@@ -1,0 +1,13 @@
+
+/*
+
+# חריגים: שמור את .gitignore ואת src
+!.gitignore
+!/src/
+
+# בתוך src – התעלם מקבצי זבל של פייתון/עורכים
+/src/**/__pycache__/
+/src/**/*.py[cod]
+/src/**/$py.class
+/src/**/.DS_Store
+/src/**/.ipynb_checkpoints
