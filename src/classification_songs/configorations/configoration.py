@@ -1,5 +1,5 @@
 import redis
-from logger_setup import logger
+from .logger_setup import logger_info_process
 
 _WHISPER_MODEL = None
 _WHISPER_NAME = None
@@ -8,26 +8,29 @@ _WHISPER_DEVICE = None
 def get_whisper(model_name='medium', device='cpu'):
     global _WHISPER_MODEL, _WHISPER_NAME, _WHISPER_DEVICE
     if not _WHISPER_MODEL is None:
-        logger.info(f'returning caches whisper model: {_WHISPER_MODEL}')
+        logger_info_process.info(f'returning caches whisper model: {_WHISPER_MODEL}')
         return _WHISPER_MODEL
     import whisper
-    logger.info(f"loading whisper model:'{model_name}' on device: '{device}'")
+    logger_info_process.info(f"loading whisper model:'{model_name}' on device: '{device}'")
     _WHISPER_MODEL = whisper.load_model(model_name, device=device)
     _WHISPER_NAME = model_name
     _WHISPER_DEVICE = device
     return _WHISPER_MODEL
 
 try:
-    info_queue = redis.Redis(host='localhost', port=6379, db=0)
-    info_queue.ping()
-    logger.info(f'connected to redis for info queue')
+    main_queue = redis.Redis(host='localhost', port=6379, db=0)
+    main_queue.ping()
+    logger_info_process.info(f'connected to redis for main queue')
 except redis.ConnectionError:
-    logger.info(f'failed to connect to redis for info queue')
+    logger_info_process.error(f'failed to connect to redis for main queue')
+    main_queue = None
 
 
 
 AUDIO_EXTENSIONS = (".mp3", ".wav", ".flac", ".m4a", ".aac", ".ogg")
 STEM_NAMES = ['vocals', 'bass', 'drums', 'other']
+
+LIST_OF_TYPES = ['pop_genre', 'rap_genre', 'classical_genre', 'love_song']
 
 MIN_POP_REGULAR_LENGTH = 165.0
 MAX_POP_REGULAR_LENGTH = 225.0

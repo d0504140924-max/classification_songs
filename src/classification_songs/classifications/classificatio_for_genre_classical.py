@@ -1,7 +1,9 @@
 from classification_interface import ClassificationInterface
 from classification_songs.configorations._dataclasses import SongInfo, Types
 from classification_songs.configorations.get_song_details_for_comparison import GetSongDetailsForComparison
-from classification_songs.configorations.configoration import (info_queue, CLASSICAL_COMMON, CLASSICAL_LESS_COMMON, CLASSICAL_MOST_COMMON)
+from classification_songs.configorations.configoration import (main_queue, CLASSICAL_COMMON, CLASSICAL_LESS_COMMON,
+                                                               CLASSICAL_MOST_COMMON)
+from classification_songs.configorations.logger_setup import logger_info_process as logger
 import numpy as np
 
 class ClassificationForGenreClassical(ClassificationInterface):
@@ -9,9 +11,15 @@ class ClassificationForGenreClassical(ClassificationInterface):
     def __init__(self, queue_name):
         self.queue_name = queue_name
 
-    def get_song_from_queue(self):
-        info_json = info_queue.rpop(self.queue_name)
+    @staticmethod
+    def get_song_from_queue():
+        logger.info('Getting song info from queue "classical_genre" for classification classical genre')
+        info_json = main_queue.rpop('classical_genre')
+        if not info_json:
+            logger.info('No classical genre info available in queue')
+            return None
         with_types = Types.from_json(info_json)
+        logger.debug(f'With types ')
         return with_types
 
     @staticmethod
@@ -30,6 +38,7 @@ class ClassificationForGenreClassical(ClassificationInterface):
         return _all.get_words()
 
     def calculate_score_words(self, song_info: SongInfo)->float:
+        logger.info('Calculating score words for classical genre')
         song_words = self.get_words(song_info)
         words_score = 0.0
         for word in CLASSICAL_MOST_COMMON:
@@ -45,9 +54,11 @@ class ClassificationForGenreClassical(ClassificationInterface):
             if num_show > 0:
                 words_score += (len(song_words)/num_show)
         final_score = min(words_score/3.0, 100.0)
+        logger.debug(f'Final score for words: {final_score}')
         return final_score
 
     def calculate_score_length(self, song_info: SongInfo)->float:
+        logger.info('Calculating score length for classical genre')
         length = self.get_length(song_info)
         score_length = 0.0
         if 240 <= length < 600:
@@ -56,6 +67,7 @@ class ClassificationForGenreClassical(ClassificationInterface):
             score_length += 60.0
         elif 600 <= length < 1200:
             score_length += 80.0
+        logger.debug(f'final score length: {score_length}')
         return score_length
 
     def drums_scor(self, song_info: SongInfo)->float:
@@ -90,29 +102,35 @@ class ClassificationForGenreClassical(ClassificationInterface):
         return other_score
 
     def calculate_sound_score(self, song_info: SongInfo)->float:
-        sound_score = 0.4 * self.drums_scor(song_info) + 0.3 * self.bass_scor(song_info) + 0.3 * self.others_scor(song_info)
+        logger.info('Calculating sound score for classical genre')
+        sound_score = (0.4 * self.drums_scor(song_info)
+                       + 0.3 * self.bass_scor(song_info)
+                       + 0.3 * self.others_scor(song_info))
+        logger.debug(f'sound score: {sound_score}')
         return sound_score
 
     def calculate_final_score(self, song_info: SongInfo)->float:
-        final_score = 0.65 * self.calculate_sound_score(song_info) + 0.05 * self.calculate_score_words(song_info) + 0.30 * self.calculate_score_length(song_info)
+        logger.info('Calculating final score for classical genre')
+        final_score = (0.65 * self.calculate_sound_score(song_info)
+                       + 0.05 * self.calculate_score_words(song_info)
+                       + 0.30 * self.calculate_score_length(song_info))
+        logger.debug(f'final score: {final_score}')
         return final_score
 
-    def comparison_type(self)->tuple[bool, float]:
-        try:
-            dc_with_types = self.get_song_from_queue()
-            song_info = dc_with_types.song_info
-            classical = (self.calculate_final_score(song_info) > 30, self.calculate_final_score(song_info))
-            if not dc_with_types.classical_genre is None:
-                dc_with_types.classical_genre = classical
-                types_queue.lpush(self.queue_name, dc_with_types.to_json())
-            else:
-                types_queue.lpush(self.queue_name, dc_with_types)
-            return classical
-        except:
-            raise ValueError('empty queue of info')
+    def comparison_type(self) ->None:
+        logger.info('Comparing classical genre')
+        dc_with_types = self.get_song_from_queue()
+        song_info = dc_with_types.song_info
+        final_score = self.calculate_final_score(song_info)
+        classical = final_score
+        dc_with_types.classical_genre = classical
+        l
+        main_queue.lpush(self.queue_name, dc_with_types.to_json())
 
 
-
+_classical = ClassificationForGenreClassical('song_info')
+while True:
+    _classical.comparison_type()
 
 
 

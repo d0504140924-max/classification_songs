@@ -3,8 +3,7 @@
 
 # חריגים: שמור את .gitignore ואת src
 !.gitignore
-!/src/
-!/tests/
+!/classification_songs/
 
 # בתוך src – התעלם מקבצי זבל של פייתון/עורכים
 /src/**/__pycache__/

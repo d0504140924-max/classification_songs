@@ -1,18 +1,30 @@
 from classification_interface import ClassificationInterface
 from classification_songs.configorations._dataclasses import SongInfo, Types
 from classification_songs.configorations.get_song_details_for_comparison import GetSongDetailsForComparison
-from classification_songs.configorations.configoration import (info_queue, POP_COMMON, POP_LESS_COMMON, POP_MOST_COMMON)
+from classification_songs.configorations.configoration import (main_queue, POP_COMMON, POP_LESS_COMMON, POP_MOST_COMMON)
+from classification_songs.configorations.logger_setup import logger_info_process as logger
 import numpy as np
+
+GROUP_NAME = 'pop'
+CONSUMER_NAME = 'POP-1'
 
 class ClassificationForGenrePop(ClassificationInterface):
 
-    def __init__(self, queue_name):
+    def __init__(self, queue_name: str):
         self.queue_name = queue_name
 
-    def get_song_from_queue(self):
-        info_json = info_queue.rpop(self.queue_name)
+    @staticmethod
+    def get_song_from_queue():
+        info_json = main_queue.rpop('pop_genre')
+        if not info_json:
+            return None
         with_types = Types.from_json(info_json)
         return with_types
+
+    @staticmethod
+    def check_double_processing(_type)->bool:
+        pop = getattr(_type, 'pop_genre', None)
+        return pop in (None, '', [], {})
 
     @staticmethod
     def get_sound_details(song_info: SongInfo)->dict:
@@ -90,22 +102,23 @@ class ClassificationForGenrePop(ClassificationInterface):
         return sound_score
 
     def calculate_final_score(self, song_info: SongInfo)->float:
-        final_score = 0.50*self.calculate_sound_score(song_info) + 0.35*self.calculate_score_words(song_info) + 0.15*self.calculate_score_length(song_info)
+        final_score = (0.50 * self.calculate_sound_score(song_info)
+                       + 0.35 * self.calculate_score_words(song_info)
+                       + 0.15 * self.calculate_score_length(song_info))
         return final_score
 
-    def comparison_type(self)->tuple[bool, float]:
-        try:
-            dc_with_types = self.get_song_from_queue()
-            song_info = dc_with_types.song_info
-            pop = (self.calculate_final_score(song_info) > 50, self.calculate_final_score(song_info))
-            if not dc_with_types.pop_genre is None:
-                dc_with_types.pop_genre = pop
-                types_queue.lpush(self.queue_name, dc_with_types.to_json())
-            else:
-                types_queue.lpush(self.queue_name, dc_with_types)
-            return pop
-        except:
-            raise ValueError('empty queue of info')
+    def comparison_type(self) -> None:
+        dc_with_types = self.get_song_from_queue()
+        song_info = dc_with_types.song_info
+        final_score = self.calculate_final_score(song_info)
+        pop = final_score
+        dc_with_types.pop_genre = pop
+        main_queue.lpush(self.queue_name, dc_with_types.to_json())
+
+
+_pop = ClassificationForGenrePop('song_info')
+while True:
+    _pop.comparison_type()
 
 
 

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="7640ef8d-8426-4fe6-9740-de29153c13a7" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/classification_for_genre_pop.py" beforeDir="false" afterPath="$PROJECT_DIR$/classification_for_genre_pop.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../configorations/configoration.py" beforeDir="false" afterPath="$PROJECT_DIR$/../configorations/configoration.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../information/get_song_info.py" beforeDir="false" afterPath="$PROJECT_DIR$/../information/get_song_info.py" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/../../.." />
+  </component>
+  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "lastFilter": {
+    "state": "OPEN",
+    "assignee": "d0504140924-max"
+  }
+}]]></component>
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/d0504140924-max/classification_songs.git",
+    "accountId": "ee62348e-dade-4721-8b94-f2b0958c821f"
+  }
+}]]></component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 4
+}]]></component>
+  <component name="ProjectId" id="34HP3ZuyyUTN1ndqwN0zS007wXA" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "last_opened_file_path": "C:/classification_songs/src/classification_songs/classifications"
+  }
+}]]></component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-python-sdk-ce6832f46686-7b97d883f26b-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-252.25557.178" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="7640ef8d-8426-4fe6-9740-de29153c13a7" name="Changes" comment="" />
+      <created>1760867325651</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1760867325651</updated>
+    </task>
+    <servers />
+  </component>
+</project>
