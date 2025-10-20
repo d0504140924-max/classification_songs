@@ -1,14 +1,27 @@
 
 /*
 
-# חריגים: שמור את .gitignore ואת src
+# Keep these:
 !.gitignore
+!pyproject.toml
+!setup.cfg
+!setup.py
+!README.md
+!LICENSE
+!/.gitattributes
+!/.github/
+
+# Keep code & tests & scripts
 !/src/
 !/tests/
+!/scripts/
 
-# בתוך src – התעלם מקבצי זבל של פייתון/עורכים
-/src/**/__pycache__/
-/src/**/*.py[cod]
-/src/**/$py.class
-/src/**/.DS_Store
-/src/**/.ipynb_checkpoints
+# Ignore junk inside src/tests as רלוונטי:
+src/**/__pycache__/
+src/**/*.py[cod]
+tests/**/__pycache__/
+tests/**/*.py[cod]
+
+# Also keep any config you באמת צריך:
+!ruff.toml
+!pyproject-local.toml
