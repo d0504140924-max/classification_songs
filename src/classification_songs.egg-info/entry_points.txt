@@ -1,2 +1,0 @@
-[console_scripts]
-classification-songs = classification_songs.main:main
