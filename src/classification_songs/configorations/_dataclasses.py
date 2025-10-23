@@ -1,7 +1,7 @@
 from dataclasses import dataclass, asdict
-from typing import Optional
+from typing import Optional, Protocol, List
 import json
-from .logger_setup import logger_info_process, logger_classified_process
+from .logger_setup import logger_info_process, logger_classified_process as logger
 from pathlib import Path
 
 @dataclass
@@ -81,3 +81,50 @@ class Types:
     def from_json(cls, json_str: str):
         logger_classified_process.debug(f'Converting Types from json')
         return cls.from_dict(json.loads(json_str))
+
+class GenreFilter(Protocol):
+    name: str
+    def score(self, types: Types)->float:...
+
+@dataclass
+class FieldFilter:
+    name: str
+    field: str
+    weight: float = 1.0
+
+    def score(self, types: Types)->float:
+        raw = getattr(types, self.field, 0.0)
+        sc = float(raw or 0.0) * self.weight
+        logger.debug(f'Score of {self.field}, weight={self.weight}, out={sc:.2f}')
+        return sc
+
+
+@dataclass
+class CategoryFilter:
+    filters: List[GenreFilter]
+    _unknown: float = 45.0
+
+    def decide(self, types: Types)->tuple[str, float]:
+        if not self.filters:
+            logger.warning('No genre filters configured; returning Unknown')
+            return 'Unknown', 0.0
+        _score = [(f.name, f.score(types)) for f in self.filters]
+        logger.debug(f'All genre score: {_score}')
+        high_name , high_score = max(_score, key=lambda x: x[1])
+        genre = high_name if high_score >= self._unknown else 'Unknown'
+        logger.info(f'Genre decision: best={high_name} ({high_score:.2f}) | threshold={self._unknown} -> {genre}')
+        return genre, high_score
+
+
+
+
+
+
+
+
+
+
+
+
+
+

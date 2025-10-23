@@ -1,3 +1,5 @@
+import sys
+
 from classification_songs.information.get_info_interface import GetInfoInterface
 from classification_songs.configorations._dataclasses import SongInfo, Types
 from classification_songs.configorations.configoration import get_whisper, AUDIO_EXTENSIONS, STEM_NAMES, main_queue
@@ -127,8 +129,9 @@ class GetSongInfo(GetInfoInterface):
         main_queue.lpush(self.queue_name, types.to_json())
         logger_info_process.info(f'Pushed song {song_info.song_name} to queue{self.queue_name}')
 
-get_info = GetSongInfo('song_info')
-def while_true(path: str):
+def main(path: str) -> None:
+    get_info = GetSongInfo('song_info')
     while True:
         get_info.get_info(path)
-
+if __name__ == '__main__':
+    main(sys.argv[1])

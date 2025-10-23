@@ -11,6 +11,7 @@ def make_types(pop, rap, classical, path="song.mp3"):
     return DummyTypes(song_info=DummySongInfo(song_path=Path(path)), pop_genre=pop, rap_genre=rap, classical_genre=classical)
 
 def test_calculate_final_genre_threshold_and_mapping():
+    # בראש הקובץ (כל ההופעות)
     mod = load_module_wo_runner("classification_songs/update_file/upload_to_file.py", "upload_to_file")
 
     # הזרקת תלותים: Types דמיוני
@@ -22,14 +23,18 @@ def test_calculate_final_genre_threshold_and_mapping():
     assert mod.UpLoadToFile.calculate_final_genre(t2) == "Unknown"  # סף >45  :contentReference[oaicite:4]{index=4}
 
 def test_song_format_returns_tuple_path_suffix():
-    mod = load_module_wo_runner("upload_to_file.py", "upload_to_file")
+    # בראש הקובץ (כל ההופעות)
+    mod = load_module_wo_runner("classification_songs/update_file/upload_to_file.py", "upload_to_file")
+
     patch_external(mod, set_types=True)
     t = make_types(60, 0, 0, path="x.flac")
     path, suf = mod.UpLoadToFile.song_format(t)
     assert isinstance(path, Path) and suf == ".flac"  #  :contentReference[oaicite:5]{index=5}
 
 def test_saperate_to_formats_all_branches():
-    mod = load_module_wo_runner("upload_to_file.py", "upload_to_file")
+    # בראש הקובץ (כל ההופעות)
+    mod = load_module_wo_runner("classification_songs/update_file/upload_to_file.py", "upload_to_file")
+
     patch_external(mod, set_mutagen=True)  # מספק מחלקות WAV/MP4/FLAC/OGG/EasyID3 דמה
     U = mod.UpLoadToFile()
 
@@ -42,7 +47,9 @@ def test_saperate_to_formats_all_branches():
     # אם לא קרסנו – עבר
 
 def test_upload_to_file_pipeline_minimal_queue_happy_path():
-    mod = load_module_wo_runner("upload_to_file.py", "upload_to_file")
+    # בראש הקובץ (כל ההופעות)
+    mod = load_module_wo_runner("classification_songs/update_file/upload_to_file.py", "upload_to_file")
+
     dq = patch_external(mod, set_queue=True)   # main_queue דמה
     patch_external(mod, set_mutagen=True)      # mutagen דמה
     patch_external(mod, set_types=True)        # Types/SongInfo דמה

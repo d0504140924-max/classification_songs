@@ -1,5 +1,6 @@
 import redis
 from .logger_setup import logger_info_process
+from classification_songs.configorations._dataclasses import CategoryFilter, FieldFilter
 
 _WHISPER_MODEL = None
 _WHISPER_NAME = None
@@ -121,3 +122,21 @@ LOVE_LESS_COMMON = [
     "melody", "serenade"
 ]
 
+def make_genre_decider()->CategoryFilter:
+    return CategoryFilter(
+        filters=[
+            FieldFilter(name='pop', field='pop_genre', weight=1.0),
+            FieldFilter(name='rap', field='rap_genre', weight=1.0),
+            FieldFilter(name='classical', field='classical_genre', weight=1.0)
+        ],
+        _unknown=45.0
+    )
+
+
+def make_song_type_decider()->CategoryFilter:
+    return CategoryFilter(
+        filters=[
+            FieldFilter(name='love_song', field='love_song', weight=1.0),
+        ],
+        _unknown=50.0
+    )

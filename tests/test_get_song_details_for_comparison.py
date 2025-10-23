@@ -1,15 +1,16 @@
 import sys, pathlib
 sys.path.append(str(pathlib.Path(__file__).parent))  # כדי ש-helpers יימצא
 import numpy as np
-from helpers import load_module_wo_runner, patch_external, DummyTypes, DummySongInfo
+from helpers import load_module_wo_runner, patch_external, DummySongInfo, DummyLibrosa
 
 # מכסה: get_drums/get_bass/get_other/get_all_sound/_lemmatizer  :contentReference[oaicite:6]{index=6}
 
 def _make_mod_with_fakes():
+    # librosa נטען בשורה הראשונה במודול – צריך להזריק לפני ה-load:
+    sys.modules['librosa'] = DummyLibrosa  # <- חשוב!
     mod = load_module_wo_runner("classification_songs/configorations/get_song_details_for_comparison.py", "gsdfc")
-
-    patch_external(mod, set_librosa=True)   # librosa דמה
-    patch_external(mod, set_wordnet=True)   # WordNetLemmatizer דמה
+    # השאר פאטצ'ים אחרי הטעינה:
+    patch_external(mod, set_wordnet=True)   # לממטייזר דמה
     return mod
 
 def test_get_drums_bass_other_and_all_sound():

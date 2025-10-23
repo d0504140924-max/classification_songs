@@ -6,7 +6,7 @@ from helpers import load_module_wo_runner, patch_external, DummyTypes, DummySong
 # מכסה: get_song_from_queue(), queues() שמפזר ל-LIST_OF_TYPES או ל-'all_filed'  :contentReference[oaicite:18]{index=18}  :contentReference[oaicite:19]{index=19}
 
 def make_module():
-    mod = load_module_wo_runner("classification_songs/classifications/send_to_classifier.py", "routermod")
+    mod = load_module_wo_runner("classification_songs/classifications/send_to_clasiffier.py", "routermod")
 
     dq = patch_external(mod, set_queue=True)
     patch_external(mod, set_types=True)
@@ -17,7 +17,7 @@ def make_module():
 
 def test_get_song_from_queue_empty_and_nonempty():
     mod, dq = make_module()
-    S = mod.SendToClassifier("song_info")
+    S = mod.SendToClasiffier("song_info")
 
     assert S.get_song_from_queue() is None  # ריק
 

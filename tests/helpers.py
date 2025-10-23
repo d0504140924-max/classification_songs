@@ -3,20 +3,45 @@ import importlib.util, types, re, pathlib, json
 import builtins
 from dataclasses import dataclass
 from pathlib import Path
+import sys, types, re
 
-ROOT = Path(__file__).resolve().parents[1]  # תקן אם צריך
+def _find_root():
+    p = Path(__file__).resolve().parent
+    for _ in range(6):
+        if (p / "classification_songs").exists():
+            return p
+        p = p.parent
+    return Path.cwd()
+
+ROOT = _find_root()
 
 def load_module_wo_runner(filename: str, module_name: str):
     """
-    טוען מודול מקובץ, אך מסיר ממנו את בלוק ה-'while True' האחרון כדי שלא ירוץ לופ אינסופי בזמן import.
+    טוען מודול מקובץ, מסיר את ה-while True האחרון, ומוודא ש-root + תיקיית הקובץ
+    נמצאות ב-sys.path כדי שייבוא חבילות/שכנים יעבוד.
     """
-    path = ROOT / filename
+    path = (ROOT / filename).resolve()
+    if not path.exists():
+        name_only = Path(filename).name
+        found = list(ROOT.rglob(name_only))
+        if not found:
+            raise FileNotFoundError(f"Can't find '{filename}' or '{name_only}' under {ROOT}")
+        path = found[0]
+
+    # הוסף נתיבים לרזולוציה של ייבוא
+    root_str = str(ROOT)
+    if root_str not in sys.path:
+        sys.path.insert(0, root_str)
+    parent_str = str(path.parent)
+    if parent_str not in sys.path:
+        sys.path.insert(0, parent_str)
+
     src = path.read_text(encoding="utf-8")
-    # חתוך מה-while True האחרון עד סוף הקובץ (כולל)
     cut = re.sub(r"(?:\n|\r\n?)while\s+True\s*:\s*(?:.|\n|\r\n)*\Z", "\n", src, count=1, flags=re.MULTILINE)
+
     mod = types.ModuleType(module_name)
     mod.__file__ = str(path)
-    exec(compile(cut, filename, "exec"), mod.__dict__)
+    exec(compile(cut, str(path), "exec"), mod.__dict__)
     return mod
 
 # דמי Types/SongInfo תואמים לממשק שמופיע בקוד שלכם
@@ -50,6 +75,21 @@ class DummyTypes:
             "classical_genre": self.classical_genre,
             "love_song": self.love_song,
         })
+
+    def to_dict(self):
+        return {
+            "song_info": {
+                "song_name": getattr(self.song_info, "song_name", None),
+                "song_path": str(getattr(self.song_info, "song_path", "")) if getattr(self.song_info, "song_path",
+                                                                                      None) else None,
+                "song_words": getattr(self.song_info, "song_words", None),
+                "song_length": getattr(self.song_info, "song_length", None),
+                "song_sound": getattr(self.song_info, "song_sound", None),
+            },
+            "pop_genre": self.pop_genre,
+            "rap_genre": self.rap_genre,
+            "classical_genre": self.classical_genre,
+        }
 
     @classmethod
     def from_json(cls, s: str):

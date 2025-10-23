@@ -12,19 +12,18 @@ class ClassificationForGenrePop(ClassificationInterface):
 
     def __init__(self, queue_name: str):
         self.queue_name = queue_name
+        logger.info(f'Initialized ClassificationForGenrePop with queue "{queue_name}"')
 
     @staticmethod
     def get_song_from_queue():
+        logger.debug('Getting song info from queue')
         info_json = main_queue.rpop('pop_genre')
         if not info_json:
+            logger.info('No song found in "pop_genre" queue — waiting...')
             return None
         with_types = Types.from_json(info_json)
+        logger.debug(f'Successfully parsed {with_types.song_info.song_name if with_types.song_info else "unknown"}')
         return with_types
-
-    @staticmethod
-    def check_double_processing(_type)->bool:
-        pop = getattr(_type, 'pop_genre', None)
-        return pop in (None, '', [], {})
 
     @staticmethod
     def get_sound_details(song_info: SongInfo)->dict:
@@ -42,6 +41,7 @@ class ClassificationForGenrePop(ClassificationInterface):
         return _all.get_words()
 
     def calculate_score_words(self, song_info: SongInfo)->float:
+        logger.info(f'Calculating score words for {song_info.song_name}')
         song_words = self.get_words(song_info)
         words_score = 0.0
         for word in POP_MOST_COMMON:
@@ -57,9 +57,11 @@ class ClassificationForGenrePop(ClassificationInterface):
             if num_show > 0:
                 words_score += (len(song_words)/num_show)
         final_score = min(words_score/3.0, 100.0)
+        logger.debug(f'Score words for {song_info.song_name} : {final_score: .f2}')
         return final_score
 
     def calculate_score_length(self, song_info: SongInfo)->float:
+        logger.info(f'Calculating score length for {song_info.song_name}')
         length = self.get_length(song_info)
         score_length = 0.0
         if 165 <= length < 225:
@@ -68,57 +70,70 @@ class ClassificationForGenrePop(ClassificationInterface):
             score_length += 45.0
         elif 225 <= length < 300:
             score_length += 75.0
+        logger.debug(f'Score length for {song_info.song_name} : {length: .f2}')
         return score_length
 
     def drums_scor(self, song_info: SongInfo)->float:
+        logger.debug(f'Drums scor for {song_info.song_name}')
         sound = self.get_sound_details(song_info)
         drums = sound['drums']
         drum_score = (
             ((1 - min(abs(drums['tempo']-110), 40)/40) * 0.5)*100 +
-            ((1 - min(drums['ibi_std'] if np.isfinite(drums['ibi_std']) else 0.5)/0.5) * 0.3)*100 +
+            ((1 - min(drums['ibi_std'] if np.isfinite(drums['ibi_std']) else 0.5, 0.5)/0.5) * 0.3)*100 +
             (min(drums['onset_density']/2.0, 1.0) * 0.2)*100
         )
+        logger.debug(f'drums scor for {song_info.song_name} : {drum_score: .f2}')
         return max(0.0, min(100, drum_score))
 
     def bass_scor(self, song_info: SongInfo)->float:
+        logger.debug(f'Bass scor for {song_info.song_name}')
         sound = self.get_sound_details(song_info)
         bass = sound['bass']
         bass_score = (
             ((1 - abs(bass['low_ratio']-0.20)/0.20) * 0.6)*100 +
             max(0.0, min(1.0, (bass['corr']+0.5)/1.0)) *40.0
         )
+        logger.debug(f'bass scor for {song_info.song_name} : {bass_score: .f2}')
         return max(0.0, min(100, bass_score))
 
     def others_scor(self, song_info: SongInfo)->float:
+        logger.debug(f'Other scor for {song_info.song_name}')
         sound = self.get_sound_details(song_info)
         other = sound['other']
         bright_score = 1 - ((min(abs(other['centroid']-2200)/1200, 1.0))*1.0)
         dr_scor = 1 - (min(abs(other['dr_db']-12)/6, 1.0)*1.0)
         other_score = 70.0*bright_score + 30.0*dr_scor
+        logger.debug(f'other scor for {song_info.song_name} : {other_score: .f2}')
         return other_score
 
     def calculate_sound_score(self, song_info: SongInfo)->float:
+        logger.info(f'Calculating sound score for {song_info.song_name}')
         sound_score = 0.4*self.drums_scor(song_info) + 0.3*self.bass_scor(song_info) + 0.3*self.others_scor(song_info)
+        logger.debug(f'calculating sound score for {song_info.song_name} : {sound_score: .f2}')
         return sound_score
 
     def calculate_final_score(self, song_info: SongInfo)->float:
+        logger.info(f'Calculating final score for {song_info.song_name}')
         final_score = (0.50 * self.calculate_sound_score(song_info)
                        + 0.35 * self.calculate_score_words(song_info)
                        + 0.15 * self.calculate_score_length(song_info))
+        logger.debug(f'final score for {song_info.song_name} : {final_score: .f2}')
         return final_score
 
     def comparison_type(self) -> None:
+        logger.debug(f'Comparison type for pop genre')
         dc_with_types = self.get_song_from_queue()
         song_info = dc_with_types.song_info
         final_score = self.calculate_final_score(song_info)
         pop = final_score
         dc_with_types.pop_genre = pop
         main_queue.lpush(self.queue_name, dc_with_types.to_json())
+        logger.info(f'pushed update Types with pop score={final_score: .f2} to queue {self.queue_name}')
 
-
-_pop = ClassificationForGenrePop('song_info')
-while True:
-    _pop.comparison_type()
+if __name__ == '__main__':
+    _pop = ClassificationForGenrePop('song_info')
+    while True:
+        _pop.comparison_type()
 
 
 
