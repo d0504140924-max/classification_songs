@@ -6,7 +6,7 @@ _WHISPER_MODEL = None
 _WHISPER_NAME = None
 _WHISPER_DEVICE = None
 
-def get_whisper(model_name='medium', device='cpu'):
+def get_whisper(model_name='small', device='cpu'):
     global _WHISPER_MODEL, _WHISPER_NAME, _WHISPER_DEVICE
     if not _WHISPER_MODEL is None:
         logger_info_process.info(f'returning caches whisper model: {_WHISPER_MODEL}')
@@ -26,7 +26,11 @@ except redis.ConnectionError:
     logger_info_process.error(f'failed to connect to redis for main queue')
     main_queue = None
 
-
+QUEUE_SONG_INFO_IN   = 'song_info'
+QUEUE_POP_GENRE      = 'pop_genre'
+QUEUE_RAP_GENRE      = 'rap_genre'
+QUEUE_CLASSICAL_GENRE= 'classical_genre'
+QUEUE_ALL_FILED      = 'all_filed'
 
 AUDIO_EXTENSIONS = (".mp3", ".wav", ".flac", ".m4a", ".aac", ".ogg")
 STEM_NAMES = ['vocals', 'bass', 'drums', 'other']

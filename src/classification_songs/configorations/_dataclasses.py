@@ -55,7 +55,7 @@ class Types:
     classical_genre: Optional[float] = None
 
     def to_dict(self)->dict:
-        logger_classified_process.debug(f'Converting Types of to dict')
+        logger.debug(f'Converting Types of to dict')
         _dict = asdict(self)
         if _dict['song_info'] is not None:
             _dict['song_info'] = self.song_info.to_dict()
@@ -63,7 +63,7 @@ class Types:
 
     @classmethod
     def from_dict(cls, _dict: dict):
-        logger_classified_process.debug(f"Converting Types from dict: {_dict.get('song_name')}")
+        logger.debug(f"Converting Types from dict: {_dict.get('song_name')}")
         si = SongInfo.from_dict(_dict.get('song_info')) if _dict and _dict.get('song_info') else None
         return cls(
             song_info=si,
@@ -74,12 +74,12 @@ class Types:
         )
 
     def to_json(self)->str:
-        logger_classified_process.debug(f'Converting to json')
+        logger.debug(f'Converting to json')
         return json.dumps(self.to_dict(), ensure_ascii=False)
 
     @classmethod
     def from_json(cls, json_str: str):
-        logger_classified_process.debug(f'Converting Types from json')
+        logger.debug(f'Converting Types from json')
         return cls.from_dict(json.loads(json_str))
 
 class GenreFilter(Protocol):

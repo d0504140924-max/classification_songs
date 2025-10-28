@@ -1,3 +1,4 @@
+from time import sleep
 from classification_interface import ClassificationInterface
 from classification_songs.configorations._dataclasses import SongInfo, Types
 from classification_songs.configorations.get_song_details_for_comparison import GetSongDetailsForComparison
@@ -5,8 +6,6 @@ from classification_songs.configorations.configoration import (main_queue, POP_C
 from classification_songs.configorations.logger_setup import logger_info_process as logger
 import numpy as np
 
-GROUP_NAME = 'pop'
-CONSUMER_NAME = 'POP-1'
 
 class ClassificationForGenrePop(ClassificationInterface):
 
@@ -15,15 +14,24 @@ class ClassificationForGenrePop(ClassificationInterface):
         logger.info(f'Initialized ClassificationForGenrePop with queue "{queue_name}"')
 
     @staticmethod
-    def get_song_from_queue():
-        logger.debug('Getting song info from queue')
-        info_json = main_queue.rpop('pop_genre')
-        if not info_json:
-            logger.info('No song found in "pop_genre" queue — waiting...')
+    def get_song_from_queue(timeout: int = 5):
+        if main_queue is None:
+            logger.error('Redis connection is None')
             return None
-        with_types = Types.from_json(info_json)
-        logger.debug(f'Successfully parsed {with_types.song_info.song_name if with_types.song_info else "unknown"}')
-        return with_types
+        try:
+            res = main_queue.brpop('pop_genre', timeout=timeout)
+            if not res:
+                logger.debug('No song found in "pop_genre" (timeout)')
+                return None
+            _q, info_json = res
+            if isinstance(info_json, bytes):
+                info_json = info_json.decode('utf-8', errors='ignore')
+            with_types = Types.from_json(info_json)
+            logger.debug(f'Successfully parsed {with_types.song_info.song_name if with_types.song_info else "unknown"}')
+            return with_types
+        except Exception as e:
+            logger.error(f'Failed to fetch/parse from "pop_genre": {e}')
+            return None
 
     @staticmethod
     def get_sound_details(song_info: SongInfo)->dict:
@@ -70,7 +78,7 @@ class ClassificationForGenrePop(ClassificationInterface):
             score_length += 45.0
         elif 225 <= length < 300:
             score_length += 75.0
-        logger.debug(f'Score length for {song_info.song_name} : {length: .f2}')
+        logger.debug(f'Score length for {song_info.song_name} : {score_length:.2f}')
         return score_length
 
     def drums_scor(self, song_info: SongInfo)->float:
@@ -82,7 +90,7 @@ class ClassificationForGenrePop(ClassificationInterface):
             ((1 - min(drums['ibi_std'] if np.isfinite(drums['ibi_std']) else 0.5, 0.5)/0.5) * 0.3)*100 +
             (min(drums['onset_density']/2.0, 1.0) * 0.2)*100
         )
-        logger.debug(f'drums scor for {song_info.song_name} : {drum_score: .f2}')
+        logger.debug(f'drums scor for {song_info.song_name} : {drum_score:.2f}')
         return max(0.0, min(100, drum_score))
 
     def bass_scor(self, song_info: SongInfo)->float:
@@ -93,7 +101,7 @@ class ClassificationForGenrePop(ClassificationInterface):
             ((1 - abs(bass['low_ratio']-0.20)/0.20) * 0.6)*100 +
             max(0.0, min(1.0, (bass['corr']+0.5)/1.0)) *40.0
         )
-        logger.debug(f'bass scor for {song_info.song_name} : {bass_score: .f2}')
+        logger.debug(f'bass scor for {song_info.song_name} : {bass_score:.2f}')
         return max(0.0, min(100, bass_score))
 
     def others_scor(self, song_info: SongInfo)->float:
@@ -103,13 +111,13 @@ class ClassificationForGenrePop(ClassificationInterface):
         bright_score = 1 - ((min(abs(other['centroid']-2200)/1200, 1.0))*1.0)
         dr_scor = 1 - (min(abs(other['dr_db']-12)/6, 1.0)*1.0)
         other_score = 70.0*bright_score + 30.0*dr_scor
-        logger.debug(f'other scor for {song_info.song_name} : {other_score: .f2}')
+        logger.debug(f'other scor for {song_info.song_name} : {other_score:.2f}')
         return other_score
 
     def calculate_sound_score(self, song_info: SongInfo)->float:
         logger.info(f'Calculating sound score for {song_info.song_name}')
         sound_score = 0.4*self.drums_scor(song_info) + 0.3*self.bass_scor(song_info) + 0.3*self.others_scor(song_info)
-        logger.debug(f'calculating sound score for {song_info.song_name} : {sound_score: .f2}')
+        logger.debug(f'calculating sound score for {song_info.song_name} : {sound_score:.2f}')
         return sound_score
 
     def calculate_final_score(self, song_info: SongInfo)->float:
@@ -117,23 +125,32 @@ class ClassificationForGenrePop(ClassificationInterface):
         final_score = (0.50 * self.calculate_sound_score(song_info)
                        + 0.35 * self.calculate_score_words(song_info)
                        + 0.15 * self.calculate_score_length(song_info))
-        logger.debug(f'final score for {song_info.song_name} : {final_score: .f2}')
+        logger.debug(f'final score for {song_info.song_name} : {final_score:.2f}')
         return final_score
 
     def comparison_type(self) -> None:
-        logger.debug(f'Comparison type for pop genre')
-        dc_with_types = self.get_song_from_queue()
-        song_info = dc_with_types.song_info
-        final_score = self.calculate_final_score(song_info)
-        pop = final_score
-        dc_with_types.pop_genre = pop
-        main_queue.lpush(self.queue_name, dc_with_types.to_json())
-        logger.info(f'pushed update Types with pop score={final_score: .f2} to queue {self.queue_name}')
+        logger.debug('Comparison type for pop genre')
+        dc_with_types = self.get_song_from_queue(timeout=5)
+        if dc_with_types is None:
+            return
+        try:
+            song_info = dc_with_types.song_info
+            final_score = self.calculate_final_score(song_info)
+            dc_with_types.pop_genre = final_score
+            main_queue.lpush(self.queue_name, dc_with_types.to_json())
+            logger.info(f'pushed update Types with pop score={final_score: .f2} to queue {self.queue_name}')
+        except Exception as e:
+            logger.error(f'pop worker failed: {e}')
 
 if __name__ == '__main__':
     _pop = ClassificationForGenrePop('song_info')
     while True:
-        _pop.comparison_type()
+        try:
+            _pop.comparison_type()
+            sleep(0.02)
+        except Exception as e:
+            logger.error(f'pop crash-loop guard: {e}')
+            sleep(1)
 
 
 

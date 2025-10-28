@@ -50,7 +50,6 @@ class GetSongDetailsForComparison:
             freqs = librosa.fft_frequencies(sr=sr, n_fft=2048)
             total = s.sum() + 1e-12
             low_ratio = s[(freqs >= 20) & (freqs < 200), :].sum() / total
-
             drums_path = self.sound_files['drums_path']
             d, _ = librosa.load(drums_path, sr=sr, mono=True)
             la, lb = self.low_envelope(b), self.low_envelope(d)

@@ -1,5 +1,4 @@
 import sys
-
 from classification_songs.information.get_info_interface import GetInfoInterface
 from classification_songs.configorations._dataclasses import SongInfo, Types
 from classification_songs.configorations.configoration import get_whisper, AUDIO_EXTENSIONS, STEM_NAMES, main_queue
@@ -53,10 +52,17 @@ class GetSongInfo(GetInfoInterface):
         out_root.mkdir(parents=True, exist_ok=True)
         h = hashlib.sha1(str(path.resolve()).encode()).hexdigest()[:12]
         out_dir = out_root / model_name / h
+        produced_dir = out_dir / model_name / path.stem
+        expected = [produced_dir / f"{stem}.wav" for stem in ("vocals", "bass", "drums", "other")]
+        if all(p.exists() for p in expected):
+            logger_info_process.info(f"Skipping Demucs — stems already exist at {produced_dir}")
+            return produced_dir
         out_dir.mkdir(parents=True, exist_ok=True)
         cmd = ["demucs", "-n", model_name, "-d", 'cpu', "-o", str(out_dir), str(path)]
-        subprocess.run(cmd, capture_output=True, text=True, check=False)
-        produced_dir = out_dir / model_name / path.stem
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        if result.returncode != 0:
+            logger_info_process.error(f"Demucs failed (code {result.returncode}).\nSTDERR:\n{result.stderr}")
+            raise RuntimeError("Demucs failed; see logs for details.")
         logger_info_process.debug(f'Demucs output directory {out_dir}')
         return produced_dir
 
@@ -87,11 +93,6 @@ class GetSongInfo(GetInfoInterface):
         logger_info_process.info(f'Transcribing vocal from {vocals}')
         model = get_whisper()
         result  = model.transcribe(str(vocals), language='en')
-        try:
-            vocals.unlink()
-            logger_info_process.debug(f'Removed temporary vocal file {vocals}')
-        except Exception as e:
-            logger_info_process.warning(f'Failed to remove vocal file {vocals}: {e}')
         text = result.get('text', '') if isinstance(result, dict) else ''
         words = re.findall(r"[A-Za-z']+", text)
         logger_info_process.debug(f'Extracted words: {words}')
@@ -115,7 +116,7 @@ class GetSongInfo(GetInfoInterface):
         other_path = separated_stems['other']
         return {'bass_path': bass_path, 'drums_path': drums_path, 'other_path': other_path}
 
-    def get_info(self, path: str) ->None:
+    def get_info(self, path: str) ->SongInfo:
         logger_info_process.debug(f'Getting info for {path}')
         _pathlib = Path(path)
         self.check_path_exist(_pathlib)
@@ -128,10 +129,10 @@ class GetSongInfo(GetInfoInterface):
         types = Types(song_info=song_info)
         main_queue.lpush(self.queue_name, types.to_json())
         logger_info_process.info(f'Pushed song {song_info.song_name} to queue{self.queue_name}')
+        return song_info
 
 def main(path: str) -> None:
     get_info = GetSongInfo('song_info')
-    while True:
-        get_info.get_info(path)
+    get_info.get_info(path)
 if __name__ == '__main__':
-    main(sys.argv[1])
+    main(r'C:\pop_song.mp3')

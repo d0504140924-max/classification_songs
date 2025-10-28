@@ -1,3 +1,4 @@
+from time import sleep
 from classification_interface import ClassificationInterface
 from classification_songs.configorations._dataclasses import SongInfo, Types
 from classification_songs.configorations.get_song_details_for_comparison import GetSongDetailsForComparison
@@ -12,15 +13,24 @@ class ClassificationForGenreRap(ClassificationInterface):
         logger.info(f'Initialized ClassificationForGenreRap with queue "{queue_name}"')
 
     @staticmethod
-    def get_song_from_queue():
-        logger.info(f'getting song info from queue')
-        info_json = main_queue.rpop('rap_genre')
-        if not info_json:
-            logger.info('No song found in "rap_genre" queue — waiting...')
+    def get_song_from_queue(timeout: int = 5):
+        if main_queue is None:
+            logger.error('Redis connection is None')
             return None
-        with_types = Types.from_json(info_json)
-        logger.debug(f'Successfully parsed {with_types.song_info.song_name}')
-        return with_types
+        try:
+            res = main_queue.brpop('rap_genre', timeout=timeout)
+            if not res:
+                logger.debug('No song found in "rap_genre" (timeout)')
+                return None
+            _q, info_json = res
+            if isinstance(info_json, bytes):
+                info_json = info_json.decode('utf-8', errors='ignore')
+            with_types = Types.from_json(info_json)
+            logger.debug(f'Successfully parsed {with_types.song_info.song_name if with_types.song_info else "unknown"}')
+            return with_types
+        except Exception as e:
+            logger.error(f'Failed to fetch/parse from "rap_genre": {e}')
+            return None
 
     @staticmethod
     def get_sound_details(song_info: SongInfo)->dict:
@@ -54,7 +64,7 @@ class ClassificationForGenreRap(ClassificationInterface):
             if num_show > 0:
                 words_score += (len(song_words)/num_show)
         final_score = min(words_score/3.0, 100.0)
-        logger.debug(f'score words for "{song_info.song_name}" = {final_score: .f2}')
+        logger.debug(f'score words for "{song_info.song_name}" = {final_score:.2f}')
         return final_score
 
     def calculate_score_length(self, song_info: SongInfo)->float:
@@ -67,7 +77,7 @@ class ClassificationForGenreRap(ClassificationInterface):
             score_length += 55.0
         elif 270 <= length < 360:
             score_length += 70.0
-        logger.debug(f'score length for "{song_info.song_name}" = {score_length: .f2}')
+        logger.debug(f'score length for "{song_info.song_name}" = {score_length:.2f}')
         return score_length
 
     def drums_scor(self, song_info: SongInfo)->float:
@@ -82,7 +92,7 @@ class ClassificationForGenreRap(ClassificationInterface):
         onset_density = drums['onset_density']
         density_component = min(onset_density / 2.5, 1.0) * 0.2
         drum_score = (tempo_component + ibi_component + density_component) * 100.0
-        logger.debug(f'drums score for "{song_info.song_name}" = {drum_score: .f2}')
+        logger.debug(f'drums score for "{song_info.song_name}" = {drum_score:.2f}')
         return max(0.0, min(100, drum_score))
 
     def bass_scor(self, song_info: SongInfo)->float:
@@ -94,7 +104,7 @@ class ClassificationForGenreRap(ClassificationInterface):
         corr = bass['corr']
         corr_component = max(0.0, min(1.0, (corr + 0.5) / 1.0)) * 0.3
         bass_score = (low_component + corr_component) * 100.0
-        logger.debug(f'bass score for "{song_info.song_name}" = {bass_score: .f2}')
+        logger.debug(f'bass score for "{song_info.song_name}" = {bass_score:.2f}')
         return max(0.0, min(100, bass_score))
 
     def others_scor(self, song_info: SongInfo)->float:
@@ -104,7 +114,7 @@ class ClassificationForGenreRap(ClassificationInterface):
         bright_score = 1 - (min(abs(other['centroid'] - 1800) / 900, 1.0) * 1.0)
         dr_scor = 1 - (min(abs(other['dr_db'] - 8) / 5, 1.0) * 1.0)
         other_score = 70.0*bright_score + 30.0*dr_scor
-        logger.debug(f'others score for "{song_info.song_name}" = {other_score: .f2}')
+        logger.debug(f'others score for "{song_info.song_name}" = {other_score:.2f}')
         return other_score
 
     def calculate_sound_score(self, song_info: SongInfo)->float:
@@ -112,7 +122,7 @@ class ClassificationForGenreRap(ClassificationInterface):
         sound_score = (0.4 * self.drums_scor(song_info)
                        + 0.3 * self.bass_scor(song_info)
                        + 0.3 * self.others_scor(song_info))
-        logger.debug(f'sound score for "{song_info.song_name}" = {sound_score: .f2}')
+        logger.debug(f'sound score for "{song_info.song_name}" = {sound_score:.2f}')
         return sound_score
 
     def calculate_final_score(self, song_info: SongInfo)->float:
@@ -120,21 +130,29 @@ class ClassificationForGenreRap(ClassificationInterface):
         final_score = (0.55 * self.calculate_sound_score(song_info)
                        + 0.45 * self.calculate_score_words(song_info)
                        + 0.1 * self.calculate_score_length(song_info))
-        logger.debug(f'final score for "{song_info.song_name}" = {final_score: .f2}')
+        logger.debug(f'final score for "{song_info.song_name}" = {final_score:.2f}')
         return final_score
 
     def comparison_type(self) -> None:
-        logger.debug(f'comparison type for rap genre')
-        dc_with_types = self.get_song_from_queue()
-        song_info = dc_with_types.song_info
-        final_score = self.calculate_final_score(song_info)
-        rap_genre = final_score
-        dc_with_types.rap_genre = rap_genre
-        main_queue.lpush(self.queue_name, dc_with_types.to_json())
-        logger.debug(f'pushed update Types with rap genre to queue {self.queue_name}')
-
+        logger.debug('comparison type for rap genre')
+        dc_with_types = self.get_song_from_queue(timeout=5)
+        if dc_with_types is None:
+            return
+        try:
+            song_info = dc_with_types.song_info
+            final_score = self.calculate_final_score(song_info)
+            dc_with_types.rap_genre = final_score
+            main_queue.lpush(self.queue_name, dc_with_types.to_json())
+            logger.debug(f'pushed update Types with rap genre to queue {self.queue_name}')
+        except Exception as e:
+            logger.error(f'rap worker failed: {e}')
 
 if __name__ == '__main__':
     _rap = ClassificationForGenreRap('song_info')
     while True:
-        _rap.comparison_type()
+        try:
+            _rap.comparison_type()
+            sleep(0.02)
+        except Exception as e:
+            logger.error(f'rap crash-loop guard: {e}')
+            sleep(1)
