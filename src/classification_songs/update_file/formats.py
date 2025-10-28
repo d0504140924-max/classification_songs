@@ -19,11 +19,11 @@ class WriteRegister:
 
     def register(self, writer: MetadataWriter):
         for s in writer.suffixes:
-            self._dy_suffix[s.lower()] = writer
+            self._by_suffix[s.lower()] = writer
             logger.debug(f"Registered writer for suffix {s}: {writer.__class__.__name__}")
 
     def get(self, path: Path) -> MetadataWriter | None:
-        return self._dy_suffix.get(path.suffix.lower())
+        return self._by_suffix.get(path.suffix.lower())
 
 
 class Mp3Writer:

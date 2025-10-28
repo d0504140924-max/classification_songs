@@ -2,7 +2,8 @@ from time import sleep
 from classification_interface import ClassificationInterface
 from classification_songs.configorations._dataclasses import SongInfo, Types
 from classification_songs.configorations.get_song_details_for_comparison import GetSongDetailsForComparison
-from classification_songs.configorations.configoration import (main_queue, POP_COMMON, POP_LESS_COMMON, POP_MOST_COMMON)
+from classification_songs.configorations.configoration import (main_queue, POP_COMMON, POP_LESS_COMMON, POP_MOST_COMMON,
+                                                               as_scalar)
 from classification_songs.configorations.logger_setup import logger_info_process as logger
 import numpy as np
 
@@ -65,7 +66,7 @@ class ClassificationForGenrePop(ClassificationInterface):
             if num_show > 0:
                 words_score += (len(song_words)/num_show)
         final_score = min(words_score/3.0, 100.0)
-        logger.debug(f'Score words for {song_info.song_name} : {final_score: .f2}')
+        logger.debug(f'Score words for {song_info.song_name} : {final_score}')
         return final_score
 
     def calculate_score_length(self, song_info: SongInfo)->float:
@@ -78,54 +79,67 @@ class ClassificationForGenrePop(ClassificationInterface):
             score_length += 45.0
         elif 225 <= length < 300:
             score_length += 75.0
-        logger.debug(f'Score length for {song_info.song_name} : {score_length:.2f}')
+        logger.debug(f'Score length for {song_info.song_name} : {score_length}')
         return score_length
 
-    def drums_scor(self, song_info: SongInfo)->float:
+    def drums_scor(self, song_info: SongInfo) -> float:
         logger.debug(f'Drums scor for {song_info.song_name}')
         sound = self.get_sound_details(song_info)
         drums = sound['drums']
+        tempo = as_scalar(drums.get('tempo', 110.0) or 110.0)
+        ibi_std = as_scalar(drums.get('ibi_std', 0.5) or 0.5)
+        onset_density = as_scalar(drums.get('onset_density', 0.0) or 0.0)
         drum_score = (
-            ((1 - min(abs(drums['tempo']-110), 40)/40) * 0.5)*100 +
-            ((1 - min(drums['ibi_std'] if np.isfinite(drums['ibi_std']) else 0.5, 0.5)/0.5) * 0.3)*100 +
-            (min(drums['onset_density']/2.0, 1.0) * 0.2)*100
+                ((1 - min(abs(tempo - 110), 40) / 40) * 0.5) * 100
+                + ((1 - min(ibi_std if np.isfinite(ibi_std) else 0.5, 0.5) / 0.5) * 0.3) * 100
+                + (min(onset_density / 2.0, 1.0) * 0.2) * 100
         )
-        logger.debug(f'drums scor for {song_info.song_name} : {drum_score:.2f}')
-        return max(0.0, min(100, drum_score))
+        drum_score = as_scalar(drum_score)
+        logger.debug(f'drums scor for {song_info.song_name} : {drum_score}')
+        return max(0.0, min(100.0, drum_score))
 
-    def bass_scor(self, song_info: SongInfo)->float:
+    def bass_scor(self, song_info: SongInfo) -> float:
         logger.debug(f'Bass scor for {song_info.song_name}')
         sound = self.get_sound_details(song_info)
         bass = sound['bass']
+        low_ratio = as_scalar(bass.get('low_ratio', 0.0) or 0.0)
+        corr = as_scalar(bass.get('corr', 0.0) or 0.0)
         bass_score = (
-            ((1 - abs(bass['low_ratio']-0.20)/0.20) * 0.6)*100 +
-            max(0.0, min(1.0, (bass['corr']+0.5)/1.0)) *40.0
+                ((1 - abs(low_ratio - 0.20) / 0.20) * 0.6) * 100
+                + max(0.0, min(1.0, (corr + 0.5) / 1.0)) * 40.0
         )
-        logger.debug(f'bass scor for {song_info.song_name} : {bass_score:.2f}')
-        return max(0.0, min(100, bass_score))
+        bass_score = as_scalar(bass_score)
+        logger.debug(f'bass scor for {song_info.song_name} : {bass_score}')
+        return max(0.0, min(100.0, bass_score))
 
-    def others_scor(self, song_info: SongInfo)->float:
+    def others_scor(self, song_info: SongInfo) -> float:
         logger.debug(f'Other scor for {song_info.song_name}')
         sound = self.get_sound_details(song_info)
         other = sound['other']
-        bright_score = 1 - ((min(abs(other['centroid']-2200)/1200, 1.0))*1.0)
-        dr_scor = 1 - (min(abs(other['dr_db']-12)/6, 1.0)*1.0)
-        other_score = 70.0*bright_score + 30.0*dr_scor
-        logger.debug(f'other scor for {song_info.song_name} : {other_score:.2f}')
+        centroid = as_scalar(other.get('centroid', 0.0) or 0.0)
+        dr_db = as_scalar(other.get('dr_db', 0.0) or 0.0)
+        bright_score = 1 - (min(abs(centroid - 2200) / 1200, 1.0) * 1.0)
+        dr_scor = 1 - (min(abs(dr_db - 12) / 6, 1.0) * 1.0)
+        other_score = 70.0 * bright_score + 30.0 * dr_scor
+        other_score = as_scalar(other_score)
+        logger.debug(f'other scor for {song_info.song_name} : {other_score}')
         return other_score
 
-    def calculate_sound_score(self, song_info: SongInfo)->float:
+    def calculate_sound_score(self, song_info: SongInfo) -> float:
         logger.info(f'Calculating sound score for {song_info.song_name}')
-        sound_score = 0.4*self.drums_scor(song_info) + 0.3*self.bass_scor(song_info) + 0.3*self.others_scor(song_info)
-        logger.debug(f'calculating sound score for {song_info.song_name} : {sound_score:.2f}')
+        d = as_scalar(self.drums_scor(song_info))
+        b = as_scalar(self.bass_scor(song_info))
+        o = as_scalar(self.others_scor(song_info))
+        sound_score = as_scalar(0.4 * d + 0.3 * b + 0.3 * o)
+        logger.debug(f'calculating sound score for {song_info.song_name} : {sound_score}')
         return sound_score
 
     def calculate_final_score(self, song_info: SongInfo)->float:
         logger.info(f'Calculating final score for {song_info.song_name}')
-        final_score = (0.50 * self.calculate_sound_score(song_info)
+        final_score = (0.50 * as_scalar(self.calculate_sound_score(song_info))
                        + 0.35 * self.calculate_score_words(song_info)
                        + 0.15 * self.calculate_score_length(song_info))
-        logger.debug(f'final score for {song_info.song_name} : {final_score:.2f}')
+        logger.debug(f'final score for {song_info.song_name} : {final_score}')
         return final_score
 
     def comparison_type(self) -> None:
@@ -138,7 +152,7 @@ class ClassificationForGenrePop(ClassificationInterface):
             final_score = self.calculate_final_score(song_info)
             dc_with_types.pop_genre = final_score
             main_queue.lpush(self.queue_name, dc_with_types.to_json())
-            logger.info(f'pushed update Types with pop score={final_score: .f2} to queue {self.queue_name}')
+            logger.info(f'pushed update Types with pop score={final_score} to queue {self.queue_name}')
         except Exception as e:
             logger.error(f'pop worker failed: {e}')
 

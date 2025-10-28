@@ -27,7 +27,7 @@ class GetSongDetailsForComparison:
             ibi_std = np.std(np.diff(librosa.frames_to_time(beats, sr=sr))) if len(beats) > 2 else np.nan
             on_times = librosa.onset.onset_detect(onset_envelope=on, sr=_sr, units='time')
             onset_density = len(on_times) / (len(y) / _sr)
-            logger.debug(f'Drums analyzed: tempo={tempo:.2f}, onset_density={onset_density:.3f}')
+            logger.debug(f'Drums analyzed: tempo={tempo}, onset_density={onset_density}')
             return {'tempo': tempo, 'ibi_std': ibi_std, 'onset_density': onset_density}
         except Exception as e:
             logger.error(f'Failed to analyze drums: {e}')
@@ -55,7 +55,7 @@ class GetSongDetailsForComparison:
             la, lb = self.low_envelope(b), self.low_envelope(d)
             n = min(len(la), len(lb))
             corr = float(np.dot(la[:n], lb[:n]) / (n)) if n > 8 else 0
-            logger.debug(f'Bass analyzed: low_ratio={low_ratio:.4f}, corr={corr:.3f}')
+            logger.debug(f'Bass analyzed: low_ratio={low_ratio}, corr={corr}')
             return {'low_ratio': low_ratio, 'corr': corr}
         except Exception as e:
             logger.error(f'Failed to analyze bass: {e}')
@@ -70,7 +70,7 @@ class GetSongDetailsForComparison:
             centroid = librosa.feature.spectral_centroid(y=o, sr=sr).mean()
             rms = librosa.feature.rms(y=o).flatten()
             dr_db = 10 * np.log10((np.percentile(rms, 95) + 1e-9) / (np.percentile(rms, 10) + 1e-9))
-            logger.debug(f'Other analyzed: centroid={centroid:.2f}, dr_db={dr_db:.2f}')
+            logger.debug(f'Other analyzed: centroid={centroid:.2f}, dr_db={dr_db}')
             return {'centroid': centroid, 'dr_db': dr_db}
         except Exception as e:
             logger.error(f'Failed to analyze other: {e}')

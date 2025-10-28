@@ -1,4 +1,5 @@
 import redis
+import numpy as np
 from .logger_setup import logger_info_process
 from classification_songs.configorations._dataclasses import CategoryFilter, FieldFilter
 
@@ -25,6 +26,19 @@ try:
 except redis.ConnectionError:
     logger_info_process.error(f'failed to connect to redis for main queue')
     main_queue = None
+
+
+def as_scalar(x):
+    if isinstance(x, np.ndarray):
+        x = x.squeeze()
+        if x.shape == ():
+            return x.item()
+        # אם זה לא סקלר, אפשר להחזיר ממוצע למשל:
+        return float(np.mean(x))
+    if isinstance(x, (np.floating, np.integer)):
+        return x.item()
+    return float(x)
+
 
 QUEUE_SONG_INFO_IN   = 'song_info'
 QUEUE_POP_GENRE      = 'pop_genre'
