@@ -1,0 +1,45 @@
+
+/*
+
+# Keep these:
+!.gitignore
+!pyproject.toml
+!setup.cfg
+!setup.py
+!README.md
+!LICENSE
+!/.gitattributes
+!/.github/
+
+# Keep code & tests & scripts
+!/src/
+!/tests/
+!/scripts/
+
+# Ignore junk inside src/tests as רלוונטי:
+src/**/__pycache__/
+src/**/*.py[cod]
+tests/**/__pycache__/
+tests/**/*.py[cod]
+
+# Also keep any config you באמת צריך:
+!ruff.toml
+!pyproject-local.toml
+
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+*.egg-info/
+build/
+dist/
+.vscode/
+.idea/
+logs/
+outputs/
+data/
+models/
+checkpoints/
+artifacts/
+
